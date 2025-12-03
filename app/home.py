@@ -1,15 +1,36 @@
-from element import Container, Image, Root, Text
+from element import (
+    Button,
+    ButtonType,
+    Container,
+    EventResult,
+    Form,
+    Image,
+    Root,
+    Text,
+    TextInput,
+    TextInputType,
+)
 
 
-def text_con_click(this: Container, source: Container, trigger: str) -> bool:
-    if this == source:
-        print("text container was clicked")
-        march_count, set_march_count = this.use_state("march_count", 0)
-        set_march_count(march_count + 1)
-        this.add(Text(f"march {march_count + 1}"))
-        return True
+def form_submit(this: Container, source: Container, trigger: str) -> EventResult:
+    print("login form submitted")
+    return EventResult.NOT_HANDLED
+
+
+f_style_base = (
+    "p-2 border transition-colors duration-300 focus:bg-zinc-100 focus:outline-none"
+)
+f_style_normal = f_style_base + " border-zinc-400"
+f_style_invalid = f_style_base + " border-red-500"
+
+
+def validate_email(this: TextInput, source: TextInput, trigger: str) -> EventResult:
+    print(f"validating, value: {source.value}")
+    if source.value == "guruprasadah08@gmail.com":
+        source.style = f_style_invalid
     else:
-        return False
+        source.style = f_style_normal
+    return EventResult.MUTATE_SELF
 
 
 def page() -> Root:
@@ -17,20 +38,35 @@ def page() -> Root:
         [
             Container(
                 [
-                    Image(
-                        "https://upload.wikimedia.org/wikipedia/commons/f/fc/Valorant_logo_-_pink_color_version.svg"
-                    ),
-                    Image(
-                        "https://www.theloadout.com/wp-content/sites/theloadout/2022/01/new-valorant-agent-neon.jpg"
-                    ),
-                    Container(
-                        [Text("line 1 of text"), Text("line 2 of text")],
-                        style="flex flex-col",
-                        update=text_con_click,
-                        trigger="click",
-                    ),
+                    Form(
+                        [
+                            TextInput(
+                                "login",
+                                type=TextInputType.EMAIL,
+                                placeholder="Your email",
+                                style=f_style_normal,
+                                trigger="input changed delay:500ms",
+                                update=validate_email,
+                            ),
+                            TextInput(
+                                "password",
+                                type=TextInputType.PASSWORD,
+                                placeholder="Your password",
+                                style=f_style_normal,
+                            ),
+                            Button(
+                                "submit",
+                                content="Register",
+                                type=ButtonType.SUBMIT,
+                                style="h-8 w-full bg-blue-600 text-white transition-all duration-300 hover:bg-zinc-200 hover:text-black rounded-sm hover:rounded-none",
+                            ),
+                        ],
+                        style="flex flex-col border border-zinc-400 p-4 space-y-2",
+                        update=form_submit,
+                    )
                 ],
-                style="flex flex-row h-32 rounded-md border",
+                style="m-auto",
             )
-        ]
+        ],
+        style="flex h-screen",
     )
