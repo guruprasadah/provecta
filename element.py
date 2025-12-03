@@ -144,9 +144,11 @@ class Root(Container):
     def _register_self(self, store: ElementIDStore) -> None:
         raise NotImplementedError("Root elements cannot be children")
 
-    def _event(self, source: Any, trigger: str, data: str = "") -> EventResult:
+    def _event(
+        self, source: Any, trigger: str, data: dict
+    ) -> tuple[EventResult, Element]:
         print("unhandled event with trigger", trigger)
-        return EventResult.NOT_HANDLED
+        return EventResult.NOT_HANDLED, self
 
 
 def _form_default_update(x, y, z):

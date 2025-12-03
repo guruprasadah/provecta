@@ -27,22 +27,31 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             data = json.loads(data)
             trigger = data["trigger"]
-            source = root._id_store[int(data["HEADERS"]["HX-Trigger"])]
-            target = root._id_store[int(data["HEADERS"]["HX-Target"])]
-            result, executor = target._event(source, trigger, data)
-            if result == EventResult.MUTATE_SELF:
-                rendered = renderer.render(executor, stub_children=True)
-            elif result == EventResult.MUTATE_CHILDREN:
-                rendered = renderer.render(executor)
-            elif result == EventResult.MUTATE_ALL:
-                rendered = renderer.render(root)
-            elif result == EventResult.NOT_HANDLED:
-                rendered = ""
-            else:
-                raise NotImplementedError(
-                    f"Support for this event result is not implemented yet: {result}"
-                )
-            await websocket.send_text(rendered)
+            source = (
+                root._id_store[int(data["HEADERS"]["HX-Trigger"])]
+                if root._id_store
+                else None
+            )
+            target = (
+                root._id_store[int(data["HEADERS"]["HX-Target"])]
+                if root._id_store
+                else None
+            )
+            if source is not None and target is not None:
+                result, executor = target._event(source, trigger, data)
+                if result == EventResult.MUTATE_SELF:
+                    rendered = renderer.render(executor, stub_children=True)
+                elif result == EventResult.MUTATE_CHILDREN:
+                    rendered = renderer.render(executor)
+                elif result == EventResult.MUTATE_ALL:
+                    rendered = renderer.render(root)
+                elif result == EventResult.NOT_HANDLED:
+                    rendered = ""
+                else:
+                    raise NotImplementedError(
+                        f"Support for this event result is not implemented yet: {result}"
+                    )
+                await websocket.send_text(rendered)
 
     except WebSocketDisconnect:
         return

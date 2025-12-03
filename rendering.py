@@ -11,7 +11,6 @@ from element import (
     Root,
     Text,
     TextInput,
-    TextInputType,
     _element_default_update,
 )
 
@@ -28,12 +27,6 @@ class HTMLRenderer(Renderer):
         attribs: dict[str, str]
         body: str = field(default="")
         children: list["HTMLRenderer.Node"] = field(default_factory=list)
-
-        def _flatten_ids(self) -> dict[str, "HTMLRenderer.Node"]:
-            li = {self.attribs["id"]: self}
-            for child in self.children:
-                li.update(child._flatten_ids())
-            return li
 
     _old_vdom: Node
 
@@ -101,6 +94,7 @@ class HTMLRenderer(Renderer):
                 tag = "button"
                 attribs["type"] = base.type.value
                 return self.Node(tag, attribs, base.content)
+            return self.Node("dummy, unreachable", {})
 
         else:
             raise TypeError(
