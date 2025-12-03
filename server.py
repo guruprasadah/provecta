@@ -26,6 +26,7 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             data = json.loads(data)
+            print(data)
             trigger = data["trigger"]
             source = (
                 root._id_store[int(data["HEADERS"]["HX-Trigger"])]
@@ -38,7 +39,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 else None
             )
             if source is not None and target is not None:
-                result, executor = target._event(source, trigger, data)
+                result, executor = target._event(source, trigger, root, data)
                 if result == EventResult.MUTATE_SELF:
                     rendered = renderer.render(executor, stub_children=True)
                 elif result == EventResult.MUTATE_CHILDREN:

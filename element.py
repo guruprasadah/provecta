@@ -13,7 +13,7 @@ class EventResult(Enum):
     MUTATE_ALL = auto()
 
 
-def _element_default_update(x, y, z):
+def _element_default_update(x, y, z, w):
     return EventResult.NOT_HANDLED
 
 
@@ -21,12 +21,15 @@ def _element_default_update(x, y, z):
 class Element:
     style: str = field(default="", kw_only=True)
     trigger: str = field(default="", kw_only=True)
-    update: Callable[[Any, Any, str], EventResult] = field(
+    update: Callable[[Any, Any, Any, str], EventResult] = field(
         default=_element_default_update, kw_only=True
     )
     state: dict[str, Any] = field(default_factory=dict[str, Any], kw_only=True)
 
     parent: Optional["Container"] = field(default=None, kw_only=True)
+
+    def setup(self):
+        pass
 
     def use_state(self, name: str, default: Any) -> tuple[Any, Callable[[Any], None]]:
         if name not in self.state:
@@ -41,17 +44,17 @@ class Element:
         pass
 
     def _event(
-        self, source: Any, trigger: str, data: dict
+        self, source: Any, trigger: str, root: "Root", data: dict
     ) -> tuple[EventResult, "Element"]:
         self._event_preupdate(data)
         if (
             self.update
-            and (result := self.update(self, source, trigger))
+            and (result := self.update(self, source, root, trigger))
             != EventResult.NOT_HANDLED
         ):
             return result, self
         elif self.parent:
-            return self.parent._event(source, trigger, data)
+            return self.parent._event(source, trigger, root, data)
         else:
             return EventResult.NOT_HANDLED, self
 
@@ -73,6 +76,17 @@ class Image(Element):
 @dataclass
 class Input(Element):
     name: str = field()
+
+    def setup(self):
+        top = self.parent
+        while top is not None:
+            if isinstance(top, Form):
+                top.fields[self.name] = self
+                break
+            else:
+                top = top.parent
+        else:
+            raise ValueError("Input must be an eventual descendant of a Form")
 
 
 class TextInputType(Enum):
@@ -116,6 +130,10 @@ class Container(Element):
     children: list[Element] = field(default_factory=list[Element])
     _id_store: Optional[ElementIDStore] = field(default=None, kw_only=True)
 
+    def setup(self):
+        for child in self.children:
+            child.setup()
+
     def __post_init__(self):
         for child in self.children:
             child.parent = self
@@ -140,27 +158,32 @@ class Root(Container):
         for child in self.children:
             child.parent = self
             child._register_self(self._id_store)
+        self.setup()
 
     def _register_self(self, store: ElementIDStore) -> None:
         raise NotImplementedError("Root elements cannot be children")
 
     def _event(
-        self, source: Any, trigger: str, data: dict
+        self, source: Any, trigger: str, root: "Root", data: dict
     ) -> tuple[EventResult, Element]:
         print("unhandled event with trigger", trigger)
         return EventResult.NOT_HANDLED, self
 
-
-def _form_default_update(x, y, z):
-    return EventResult.NOT_HANDLED
+    def load_into(self, new_root: "Root"):
+        for child in self.children:
+            child.parent = None
+        self.children = new_root.children
+        self.__post_init__()
 
 
 @dataclass
 class Form(Container):
-    update: Callable[[Any, Any, str], EventResult] = field(
-        default=_form_default_update, kw_only=True
-    )
+    trigger: str = field(default="submit", kw_only=True)
+    fields: dict[str, Input] = field(default_factory=dict[str, Input], kw_only=True)
 
-    def __post_init__(self):
-        if self.update is _form_default_update:
-            raise ValueError("Forms MUST have a user defined update callback")
+    def _event_preupdate(self, data: dict):
+        for key, value in data.items():
+            if key in self.fields:
+                field = self.fields[key]
+                if isinstance(field, TextInput):
+                    field.value = value
