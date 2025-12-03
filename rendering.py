@@ -78,9 +78,9 @@ class HTMLRenderer(Renderer):
                 attribs["type"] = base.type.value
                 attribs["value"] = base.value
                 attribs["placeholder"] = base.placeholder
-                attribs["min_length"] = str(base.min_length)
+                attribs["minlength"] = str(base.min_length)
                 (
-                    attribs.setdefault("max_length", str(base.max_length))
+                    attribs.setdefault("maxlength", str(base.max_length))
                     if base.max_length is not None
                     else None
                 )
