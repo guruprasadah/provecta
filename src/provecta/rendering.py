@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from element import (
+from .element import (
     Button,
     Container,
     Element,
@@ -28,15 +28,15 @@ class HTMLRenderer(Renderer):
         body: str = field(default="")
         children: list["HTMLRenderer.Node"] = field(default_factory=list)
 
-    _old_vdom: Node
+    _old_vdom: "HTMLRenderer.Node"
 
     def _build_vdom(
         self,
         base: Element,
         stub_children: bool = False,
         stub: bool = False,
-    ) -> Node:
-        attribs = {}
+    ) -> "HTMLRenderer.Node":
+        attribs: dict[str, str] = {}
         if stub:
             attribs["id"] = id(base)
             attribs["hx-preserve"] = "true"
@@ -54,7 +54,7 @@ class HTMLRenderer(Renderer):
             return self.Node("img", attribs)
         elif isinstance(base, Container):
             if stub:
-                children = []
+                children: list[HTMLRenderer.Node] = []
             else:
                 children = [
                     self._build_vdom(x, stub=stub_children) for x in base.children
@@ -115,7 +115,7 @@ class HTMLRenderer(Renderer):
             attribs["class"] = base.style
         return attribs
 
-    def _render_vdom(self, node: Node, render_children: bool = True) -> str:
+    def _render_vdom(self, node: "HTMLRenderer.Node", render_children: bool = True) -> str:
         return f"""<{node.tag} {" ".join([f"{k} = '{v}'" for k, v in node.attribs.items()])} > {node.body} {("".join([self._render_vdom(child) for child in node.children])) if render_children else ""} </{node.tag}> """
 
     def render(self, base: Element, stub_children: bool = False) -> str:
@@ -123,3 +123,5 @@ class HTMLRenderer(Renderer):
         vdom.attribs["hx-swap-oob"] = "morph"
         self._old_vdom = vdom
         return self._render_vdom(vdom)
+
+

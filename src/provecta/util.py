@@ -1,11 +1,23 @@
 import asyncio
 
 
-def indent(input: str, c=0) -> str:
+def indent(input: str, c: int = 0) -> str:
+    """
+    Indent each newline in the given string by ``c`` tab characters.
+    """
     return input.replace("\n", "\n" + ("\t" * c))
 
 
-async def wait_for_either(task_coro, bool_fn, check_interval=0.05):
+async def wait_for_either(task_coro, bool_fn, check_interval: float = 0.05):
+    """
+    Await whichever completes first: an async task or a boolean predicate.
+
+    Returns
+    -------
+    tuple[str, Any]
+        A pair of (\"task\" | \"bool\", result) indicating which completed
+        first. When the boolean predicate wins, the result is ``None``.
+    """
     loop = asyncio.get_event_loop()
     task = loop.create_task(task_coro)
 
@@ -28,3 +40,5 @@ async def wait_for_either(task_coro, bool_fn, check_interval=0.05):
         return ("task", await task)
     else:
         return ("bool", None)
+
+

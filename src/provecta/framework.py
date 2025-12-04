@@ -7,8 +7,8 @@ from starlette.responses import HTMLResponse
 from starlette.routing import Route, WebSocketRoute
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from element import EventResult, Root
-from rendering import HTMLRenderer
+from .element import EventResult, Root
+from .rendering import HTMLRenderer
 
 Page = Callable[[], Root]
 
@@ -32,8 +32,24 @@ def serve_stub(title: str = "provectus app", websocket_endpoint: str = "/") -> s
 
 
 class App(Starlette):
+    """
+    Starlette application that serves a WebSocket-driven Provecta UI.
+
+    Parameters
+    ----------
+    app_dir:
+        The Python package/module path where your application pages live,
+        e.g. ``"app"`` when you have an ``app/home.py`` module exposing
+        a ``page() -> Root`` function.
+    hot_reload:
+        Reserved for future hot-reload behaviour; currently unused but
+        kept for backwards compatibility.
+    """
+
     def __init__(self, app_dir: str = "app", hot_reload: bool = False, **kwargs):
         self.app_dir = app_dir
+        self.hot_reload = hot_reload
+
         routes = [
             Route("/", endpoint=self.serve_initial_html, methods=["GET"]),
             WebSocketRoute("/", endpoint=self.websocket_endpoint),
@@ -91,3 +107,5 @@ class App(Starlette):
 
         except WebSocketDisconnect:
             return
+
+
