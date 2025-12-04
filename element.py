@@ -10,6 +10,7 @@ class EventResult(Enum):
     NOT_HANDLED = auto()
     MUTATE_SELF = auto()
     MUTATE_CHILDREN = auto()
+    MUTATE_PARENT = auto()
     MUTATE_ALL = auto()
 
 
@@ -86,7 +87,7 @@ class Input(Element):
             else:
                 top = top.parent
         else:
-            raise ValueError("Input must be an eventual descendant of a Form")
+            print("[WARN] Input not descendant of Form")
 
 
 class TextInputType(Enum):

@@ -57,7 +57,7 @@ class App(Starlette):
             while True:
                 data = await websocket.receive_text()
                 data = json.loads(data)
-                trigger = data["trigger"]
+                trigger = data["trigger"] if "trigger" in data else ""
                 source = (
                     root._id_store[int(data["HEADERS"]["HX-Trigger"])]
                     if root._id_store
@@ -74,6 +74,10 @@ class App(Starlette):
                         rendered = renderer.render(executor, stub_children=True)
                     elif result == EventResult.MUTATE_CHILDREN:
                         rendered = renderer.render(executor)
+                    elif result == EventResult.MUTATE_PARENT:
+                        rendered = renderer.render(
+                            executor.parent if executor.parent else root
+                        )
                     elif result == EventResult.MUTATE_ALL:
                         rendered = renderer.render(root)
                     elif result == EventResult.NOT_HANDLED:
