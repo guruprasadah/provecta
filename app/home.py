@@ -19,7 +19,7 @@ def button_click(this: Button, source: Button, root: Root, trigger: str) -> Even
         this.parent.add(Text(f"this was added on click number {click_count + 1}"))
         return EventResult.MUTATE_PARENT
     else:
-        root.load_into(Root([Text("you clicked the button too many times blud")]))
+        root.load_into(Root([Text("you clicked the button too many times man")]))
         return EventResult.MUTATE_ALL
 
 
