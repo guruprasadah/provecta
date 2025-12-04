@@ -1,4 +1,4 @@
-import app.landing
+import app.punishment
 from element import (
     Button,
     ButtonType,
@@ -18,7 +18,7 @@ def form_submit(this: Form, source: Form, root: Root, trigger: str) -> EventResu
         this.fields["email"].value == "guruprasadah08@mail.com"
         and this.fields["password"].value == "hello123"
     ):
-        root.load_into(app.landing.page())
+        root.load_into(app.punishment.page())
 
     return EventResult.MUTATE_ALL
 

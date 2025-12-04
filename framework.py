@@ -70,6 +70,7 @@ class App(Starlette):
                 )
                 if source is not None and target is not None:
                     result, executor = target._event(source, trigger, root, data)
+                    result = result if result is not None else EventResult.MUTATE_ALL
                     if result == EventResult.MUTATE_SELF:
                         rendered = renderer.render(executor, stub_children=True)
                     elif result == EventResult.MUTATE_CHILDREN:

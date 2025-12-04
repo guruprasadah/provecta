@@ -1,6 +1,6 @@
 ![Provecta logo](./logo.png)
 
-Provecta is a small, minimal experiment in building an **HTMX + WebSocket-driven UI framework in Python**, written out of both curiosity and JS hate.
+Provecta is a small, minimal experiment in building an **HTMX + WebSocket-driven UI framework in Python**, written out of both curiosity and a healthy aversion to JS.
 
 This project is intentionally tiny, toy-ish, and educational: something between a tech demo, a playground for architectural ideas, and a portfolio-friendly showcase of clean modular design.
 
@@ -24,17 +24,22 @@ When an event is received, we:
 3. Compute morph-friendly changes to the DOM based on the ```EventResult```
 4. Render and send said changes via WebSocket, resulting in a page update using HTMX's out-of-band swaps.
 
-This creates a lightweight experience as far as the frontend's concerned, because the only job of the browser is to render HTML and orchestrate events.
+The browser only has to render HTML and fire events, keeping the frontend pleasantly lightweight.
 
 Minimal Example:
 
 **`app/home.py`**
-```python3
+```python
+# State lives in elements, events mutate the tree, and returning an EventResult tells Provecta what to re-render.
 def button_click(this: Button, source: Button, root: Root, trigger: str) -> EventResult:
     click_count, set_click_count = this.use_state("click_count", 0)
     set_click_count(click_count + 1)
-    this.parent.add(Text(f"this was added on click number {click_count + 1}"))
-    return EventResult.MUTATE_PARENT
+    if click_count + 1 < 10:
+        this.parent.add(Text(f"this was added on click number {click_count + 1}"))
+        return EventResult.MUTATE_PARENT
+    else:
+        root.load_into(Root([Text("you clicked the button too many times blud")])) # Load into a new page
+        return EventResult.MUTATE_ALL
 
 
 def page() -> Root:
