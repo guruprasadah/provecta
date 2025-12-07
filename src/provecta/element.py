@@ -59,6 +59,7 @@ class Element:
         if self.parent:
             for i, child in enumerate(self.parent._children):
                 if child is self:
+                    self.parent._dirty = True
                     del self.parent._children[i]
                     break
             else:
