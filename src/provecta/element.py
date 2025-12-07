@@ -36,10 +36,13 @@ class Element:
         if name not in self.state:
             self.state[name] = default
 
+        def get() -> Any:
+            return self.state[name]
+
         def set(value) -> None:
             self.state[name] = value
 
-        return self.state[name], set
+        return get, set
 
     def _event_preupdate(self, data: dict):
         pass
@@ -188,5 +191,3 @@ class Form(Container):
                 field = self.fields[key]
                 if isinstance(field, TextInput):
                     field.value = value
-
-
