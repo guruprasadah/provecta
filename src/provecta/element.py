@@ -1,7 +1,15 @@
+import logging
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any, Callable, Optional
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 
 ElementIDStore = dict[int, "Element"]
 
@@ -46,6 +54,17 @@ class Element:
             self.state[name] = value
 
         return get, set
+
+    def remove_self(self):
+        if self.parent:
+            for i, child in enumerate(self.parent._children):
+                if child is self:
+                    del self.parent._children[i]
+                    break
+            else:
+                logger.warning(
+                    f"id {id(self)} has a parent but parent doesn't store reference to it. something is seriously wrong"
+                )
 
     def _event_preupdate(self, data: dict):
         pass
@@ -93,7 +112,7 @@ class Input(Element):
             else:
                 top = top.parent
         else:
-            print("[WARN] Input not descendant of Form")
+            logger.warning("Input not descendant of Form")
 
 
 class TextInputType(Enum):
@@ -174,7 +193,7 @@ class Root(Container):
     def _event(
         self, source: Any, trigger: str, root: "Root", data: dict
     ) -> tuple[EventResult, Element]:
-        print("unhandled event with trigger", trigger)
+        logger.info(f"unhandled event with trigger: {trigger}")
         return EventResult.NOT_HANDLED, self
 
     def load_into(self, new_root: "Root"):
