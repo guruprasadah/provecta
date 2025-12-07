@@ -134,7 +134,7 @@ class Button(Input):
 
 @dataclass
 class Container(Element):
-    children: list[Element] = field(default_factory=list[Element])
+    _children: list[Element] = field(default_factory=list[Element])
     _id_store: Optional[ElementIDStore] = field(default=None, kw_only=True)
 
     def setup(self):
@@ -146,9 +146,10 @@ class Container(Element):
             child.parent = self
 
     def add(self, child: Element):
+        self._dirty = True
         child.parent = self
         child._register_self(self._id_store) if self._id_store is not None else None
-        self.children.append(child)
+        self._children.append(child)
 
     def _register_self(self, store: ElementIDStore) -> None:
         store[id(self)] = self
