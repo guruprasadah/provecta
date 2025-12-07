@@ -138,11 +138,11 @@ class Container(Element):
     _id_store: Optional[ElementIDStore] = field(default=None, kw_only=True)
 
     def setup(self):
-        for child in self.children:
+        for child in self._children:
             child.setup()
 
     def __post_init__(self):
-        for child in self.children:
+        for child in self._children:
             child.parent = self
 
     def add(self, child: Element):
@@ -154,7 +154,7 @@ class Container(Element):
     def _register_self(self, store: ElementIDStore) -> None:
         store[id(self)] = self
         self._id_store = store
-        for child in self.children:
+        for child in self._children:
             child._register_self(self._id_store)
 
 
@@ -163,7 +163,7 @@ class Root(Container):
     def __post_init__(self):
         self._id_store = ElementIDStore()
         self._id_store[id(self)] = self
-        for child in self.children:
+        for child in self._children:
             child.parent = self
             child._register_self(self._id_store)
         self.setup()
@@ -178,9 +178,9 @@ class Root(Container):
         return EventResult.NOT_HANDLED, self
 
     def load_into(self, new_root: "Root"):
-        for child in self.children:
+        for child in self._children:
             child.parent = None
-        self.children = new_root.children
+        self._children = new_root._children
         self.__post_init__()
 
 
