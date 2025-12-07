@@ -27,6 +27,8 @@ class Element:
     )
     state: dict[str, Any] = field(default_factory=dict[str, Any], kw_only=True)
 
+    _dirty: bool = field(default=False, kw_only=True)
+
     parent: Optional["Container"] = field(default=None, kw_only=True)
 
     def setup(self):
@@ -40,6 +42,7 @@ class Element:
             return self.state[name]
 
         def set(value) -> None:
+            self._dirty = True
             self.state[name] = value
 
         return get, set
