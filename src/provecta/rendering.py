@@ -1,4 +1,6 @@
-from dataclasses import dataclass, field
+import logging
+from dataclasses import dataclass, field, fields
+from enum import Enum
 from typing import Any
 
 from .element import (
@@ -13,6 +15,8 @@ from .element import (
     TextInput,
     _element_default_update,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class Renderer:
@@ -32,96 +36,51 @@ class HTMLRenderer(Renderer):
 
     def _build_vdom(
         self,
-        base: Element,
-        stub_children: bool = False,
-        stub: bool = False,
+        element: Element,
     ) -> "HTMLRenderer.Node":
         attribs: dict[str, str] = {}
-        if stub:
-            attribs["id"] = str(id(base))
+        body: str = ""
+        children: list["HTMLRenderer.Node"] = []
+
+        attribs["id"] = element._get_id()
+
+        if not element._dirty:
             attribs["hx-preserve"] = "true"
         else:
-            attribs = self._build_attribs(base)
-        if isinstance(base, Text):
-            return self.Node(
-                "span",
-                attribs,
-                base.content if not stub else "",
-            )
-        elif isinstance(base, Image):
-            if not stub:
-                attribs["src"] = base.src
-            return self.Node("img", attribs)
-        elif isinstance(base, Container):
-            if stub:
-                children: list[HTMLRenderer.Node] = []
+            for f in fields(element):
+                if data := f.metadata:
+                    if data["attribute"]:
+                        attribs[data.get("actual", f.name)] = self._render_attribute(
+                            getattr(element, f.name)
+                        )
+                    else:
+                        body = body + getattr(element, f.name)
+
+                    if attribs.get("hx-trigger"):
+                        attribs["ws-send"] = "true"
+            element._dirty = False
+            if isinstance(element, Container):
+                children = [self._build_vdom(child) for child in element._children]
             else:
-                children = [
-                    self._build_vdom(x, stub=stub_children) for x in base._children
-                ]
-            tag = "div"
-            if isinstance(base, Root):
-                attribs["id"] = "root"
-            elif isinstance(base, Form):
-                tag = "form"
-            return self.Node(
-                tag,
-                attribs,
-                children=children,
-            )
-        elif isinstance(base, Input):
-            tag = "input"
-            attribs["name"] = base.name
-            if isinstance(base, TextInput):
-                attribs["type"] = base.type.value
-                attribs["required"] = "true" if base.required else "false"
-                attribs["type"] = base.type.value
-                attribs["value"] = base.value
-                attribs["placeholder"] = base.placeholder
-                attribs["minlength"] = str(base.min_length)
-                (
-                    attribs.setdefault("maxlength", str(base.max_length))
-                    if base.max_length is not None
-                    else None
-                )
-                (
-                    attribs.setdefault("size", str(base.size))
-                    if base.size is not None
-                    else None
-                )
-                return self.Node(tag, attribs)
-            elif isinstance(base, Button):
-                tag = "button"
-                attribs["type"] = base.type.value
-                return self.Node(tag, attribs, base.content)
-            return self.Node("dummy, unreachable", {})
+                children = []
 
+        return self.Node(element._tag, attribs, body, children)
+
+    def _render_attribute(self, attribute) -> str:
+        if isinstance(attribute, bool):
+            return "true" if attribute else "false"
+        elif isinstance(attribute, Enum):
+            return attribute.value
         else:
-            raise TypeError(
-                "VDOM building for this element type is not implemented yet"
-            )
-
-    def _build_attribs(self, base: Element) -> dict[str, str]:
-        attribs: dict[str, str] = {}
-        attribs["id"] = str(id(base))
-        if base.trigger:
-            attribs["hx-trigger"] = base.trigger
-            attribs["hx-vals"] = (
-                'js:{"trigger": typeof event !== "undefined" ? event.type : "no_event_data"}'
-            )
-        if base.trigger or base.update is not _element_default_update:
-            attribs["ws-send"] = "true"
-        if base.style:
-            attribs["class"] = base.style
-        return attribs
+            return str(attribute)
 
     def _render_vdom(
         self, node: "HTMLRenderer.Node", render_children: bool = True
     ) -> str:
         return f"""<{node.tag} {" ".join([f"{k} = '{v}'" for k, v in node.attribs.items()])} > {node.body} {("".join([self._render_vdom(child) for child in node.children])) if render_children else ""} </{node.tag}> """
 
-    def render(self, base: Element, stub_children: bool = False) -> str:
-        vdom = self._build_vdom(base, stub_children)
+    def render(self, base: Element) -> str:
+        vdom = self._build_vdom(base)
         vdom.attribs["hx-swap-oob"] = "morph"
         self._old_vdom = vdom
         return self._render_vdom(vdom)

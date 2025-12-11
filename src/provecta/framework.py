@@ -1,5 +1,6 @@
 import importlib
 import json
+import logging
 from typing import Callable
 
 from starlette.applications import Starlette
@@ -11,6 +12,12 @@ from .element import EventResult, Root
 from .rendering import HTMLRenderer
 
 Page = Callable[[], Root]
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
 def serve_stub(title: str = "provectus app", websocket_endpoint: str = "/") -> str:
@@ -67,45 +74,30 @@ class App(Starlette):
         homepage: Page = importlib.import_module(f"{self.app_dir}.home").page
         root = homepage()
         rendered = renderer.render(root)
+        logger.debug(f"rendered: {rendered}")
         await websocket.send_text(rendered)
 
         try:
             while True:
                 data = await websocket.receive_text()
                 data = json.loads(data)
+                logger.debug(data)
                 trigger = data["trigger"] if "trigger" in data else ""
                 source = (
-                    root._id_store[int(data["HEADERS"]["HX-Trigger"])]
+                    root._id_store[(data["HEADERS"]["HX-Trigger"])]
                     if root._id_store
                     else None
                 )
                 target = (
-                    root._id_store[int(data["HEADERS"]["HX-Target"])]
+                    root._id_store[(data["HEADERS"]["HX-Target"])]
                     if root._id_store
                     else None
                 )
                 if source is not None and target is not None:
-                    result, executor = target._event(source, trigger, root, data)
-                    result = result if result is not None else EventResult.MUTATE_ALL
-                    if result == EventResult.MUTATE_SELF:
-                        rendered = renderer.render(executor, stub_children=True)
-                    elif result == EventResult.MUTATE_CHILDREN:
-                        rendered = renderer.render(executor)
-                    elif result == EventResult.MUTATE_PARENT:
-                        rendered = renderer.render(
-                            executor.parent if executor.parent else root
-                        )
-                    elif result == EventResult.MUTATE_ALL:
-                        rendered = renderer.render(root)
-                    elif result == EventResult.NOT_HANDLED:
-                        rendered = ""
-                    else:
-                        raise NotImplementedError(
-                            f"Support for this event result is not implemented yet: {result}"
-                        )
+                    target._event(source, trigger, root, data)
+                    rendered = renderer.render(root)
+                    logger.debug(f"rendered: {rendered}")
                     await websocket.send_text(rendered)
 
         except WebSocketDisconnect:
             return
-
-

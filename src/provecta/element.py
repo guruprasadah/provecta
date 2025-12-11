@@ -1,16 +1,12 @@
 import logging
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any, Callable, Optional, TypedDict
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
-)
 logger = logging.getLogger(__name__)
 
 
-ElementIDStore = dict[int, "Element"]
+ElementIDStore = dict[str, "Element"]
 
 
 class EventResult(Enum):
@@ -22,11 +18,12 @@ class EventResult(Enum):
 
 
 def _element_default_update(x, y, z, w):
-    return EventResult.NOT_HANDLED
+    return False
 
 
 @dataclass
 class Element:
+    _tag: str = field(default="", kw_only=True)
     style: str = field(
         default="",
         metadata={"attribute": True, "actual": "class"},
@@ -34,15 +31,18 @@ class Element:
     )
     trigger: str = field(
         default="",
-        metadata={"attribute": True, "actual": "hx-trigger"},
+        metadata={
+            "attribute": True,
+            "actual": "hx-trigger",
+        },
         kw_only=True,
     )
-    update: Callable[[Any, Any, Any, str], EventResult] = field(
+    update: Callable[[Any, Any, Any, str], bool] = field(
         default=_element_default_update, kw_only=True
     )
     state: dict[str, Any] = field(default_factory=dict[str, Any], kw_only=True)
 
-    _dirty: bool = field(default=False, kw_only=True)
+    _dirty: bool = field(default=True, kw_only=True)
 
     parent: Optional["Container"] = field(default=None, kw_only=True)
 
@@ -57,7 +57,7 @@ class Element:
             return self.state[name]
 
         def set(value) -> None:
-            self._dirty = True
+            self._set_dirty()
             self.state[name] = value
 
         return get, set
@@ -67,36 +67,39 @@ class Element:
             self.parent._children = [
                 child for child in self.parent._children if child is not self
             ]
+            self.parent._set_dirty()
+
+    def _get_id(self) -> str:
+        return str(id(self))
 
     def _event_preupdate(self, data: dict):
         pass
 
-    def _event(
-        self, source: Any, trigger: str, root: "Root", data: dict
-    ) -> tuple[EventResult, "Element"]:
+    def _event(self, source: Any, trigger: str, root: "Root", data: dict) -> None:
         self._event_preupdate(data)
-        if (
-            self.update
-            and (result := self.update(self, source, root, trigger))
-            != EventResult.NOT_HANDLED
-        ):
-            return result, self
+        if self.update:
+            self.update(self, source, root, trigger)
         elif self.parent:
-            return self.parent._event(source, trigger, root, data)
-        else:
-            return EventResult.NOT_HANDLED, self
+            self.parent._event(source, trigger, root, data)
 
     def _register_self(self, store: ElementIDStore) -> None:
-        store[id(self)] = self
+        store[self._get_id()] = self
+
+    def _set_dirty(self):
+        self._dirty = True
+        if self.parent:
+            self.parent._set_dirty()
 
 
 @dataclass
 class Text(Element):
+    _tag: str = field(default="span", kw_only=True)
     content: str = field(default="", metadata={"attribute": False})
 
 
 @dataclass
 class Image(Element):
+    _tag: str = field(default="img", kw_only=True)
     style: str = field(
         default="h-full object-contain",
         metadata={"attribute": True, "actual": "class"},
@@ -132,6 +135,7 @@ class TextInputType(Enum):
 
 @dataclass
 class TextInput(Input):
+    _tag: str = field(default="input", kw_only=True)
     required: bool = field(default=False, metadata={"attribute": True}, kw_only=True)
     type: TextInputType = field(
         default=TextInputType.TEXT, metadata={"attribute": True}, kw_only=True
@@ -161,12 +165,14 @@ class ButtonType(Enum):
 
 @dataclass
 class Button(Input):
+    _tag: str = field(default="button", kw_only=True)
     type: ButtonType = field(default=ButtonType.BUTTON, metadata={"attribute": True})
     content: str = field(default="", metadata={"attribute": False})
 
 
 @dataclass
 class Container(Element):
+    _tag: str = field(default="div", kw_only=True)
     _children: list[Element] = field(default_factory=list[Element])
     _id_store: Optional[ElementIDStore] = field(default=None, kw_only=True)
 
@@ -179,13 +185,13 @@ class Container(Element):
             child.parent = self
 
     def add(self, child: Element):
-        self._dirty = True
+        self._set_dirty()
         child.parent = self
         child._register_self(self._id_store) if self._id_store is not None else None
         self._children.append(child)
 
     def _register_self(self, store: ElementIDStore) -> None:
-        store[id(self)] = self
+        super()._register_self(store)
         self._id_store = store
         for child in self._children:
             child._register_self(self._id_store)
@@ -195,11 +201,14 @@ class Container(Element):
 class Root(Container):
     def __post_init__(self):
         self._id_store = ElementIDStore()
-        self._id_store[id(self)] = self
+        self._id_store[self._get_id()] = self
         for child in self._children:
             child.parent = self
             child._register_self(self._id_store)
         self.setup()
+
+    def _get_id(self) -> str:
+        return "root"
 
     def _register_self(self, store: ElementIDStore) -> None:
         raise NotImplementedError("Root elements cannot be children")
@@ -219,6 +228,7 @@ class Root(Container):
 
 @dataclass
 class Form(Container):
+    _tag: str = field(default="form", kw_only=True)
     trigger: str = field(
         default="submit",
         metadata={"attribute": True, "actual": "hx-trigger"},
