@@ -56,15 +56,9 @@ class Element:
 
     def remove_self(self):
         if self.parent:
-            for i, child in enumerate(self.parent._children):
-                if child is self:
-                    self.parent._dirty = True
-                    del self.parent._children[i]
-                    break
-            else:
-                logger.warning(
-                    f"id {id(self)} has a parent but parent doesn't store reference to it. something is seriously wrong"
-                )
+            self.parent._children = [
+                child for child in self.parent._children if child is not self
+            ]
 
     def _event_preupdate(self, data: dict):
         pass
