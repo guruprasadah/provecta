@@ -8,7 +8,7 @@ from starlette.responses import HTMLResponse
 from starlette.routing import Route, WebSocketRoute
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from .element import EventResult, Root
+from .element import Root
 from .rendering import HTMLRenderer
 
 Page = Callable[[], Root]

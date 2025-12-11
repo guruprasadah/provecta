@@ -1,20 +1,12 @@
 import logging
 from dataclasses import dataclass, field
-from enum import Enum, auto
-from typing import Any, Callable, Optional, TypedDict
+from enum import Enum
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
 
 ElementIDStore = dict[str, "Element"]
-
-
-class EventResult(Enum):
-    NOT_HANDLED = auto()
-    MUTATE_SELF = auto()
-    MUTATE_CHILDREN = auto()
-    MUTATE_PARENT = auto()
-    MUTATE_ALL = auto()
 
 
 def _element_default_update(x, y, z, w):
@@ -213,11 +205,8 @@ class Root(Container):
     def _register_self(self, store: ElementIDStore) -> None:
         raise NotImplementedError("Root elements cannot be children")
 
-    def _event(
-        self, source: Any, trigger: str, root: "Root", data: dict
-    ) -> tuple[EventResult, Element]:
+    def _event(self, source: Any, trigger: str, root: "Root", data: dict) -> None:
         logger.info(f"unhandled event with trigger: {trigger}")
-        return EventResult.NOT_HANDLED, self
 
     def load_into(self, new_root: "Root"):
         for child in self._children:

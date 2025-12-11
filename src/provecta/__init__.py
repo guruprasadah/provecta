@@ -12,13 +12,11 @@ This package exposes a thin public API around the internal building blocks:
     - the HTML renderer
 """
 
-from .framework import App, serve_stub
 from .element import (
     Button,
     ButtonType,
     Container,
     Element,
-    EventResult,
     Form,
     Image,
     Input,
@@ -27,6 +25,7 @@ from .element import (
     TextInput,
     TextInputType,
 )
+from .framework import App, serve_stub
 from .rendering import HTMLRenderer
 
 __all__ = [
@@ -51,5 +50,3 @@ __all__ = [
 ]
 
 __version__ = "0.1.0"
-
-
