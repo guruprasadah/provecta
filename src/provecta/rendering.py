@@ -38,7 +38,7 @@ class HTMLRenderer(Renderer):
     ) -> "HTMLRenderer.Node":
         attribs: dict[str, str] = {}
         if stub:
-            attribs["id"] = id(base)
+            attribs["id"] = str(id(base))
             attribs["hx-preserve"] = "true"
         else:
             attribs = self._build_attribs(base)

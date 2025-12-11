@@ -1,7 +1,7 @@
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from enum import Enum, auto
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, TypedDict
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,8 +27,16 @@ def _element_default_update(x, y, z, w):
 
 @dataclass
 class Element:
-    style: str = field(default="", kw_only=True)
-    trigger: str = field(default="", kw_only=True)
+    style: str = field(
+        default="",
+        metadata={"attribute": True, "actual": "class"},
+        kw_only=True,
+    )
+    trigger: str = field(
+        default="",
+        metadata={"attribute": True, "actual": "hx-trigger"},
+        kw_only=True,
+    )
     update: Callable[[Any, Any, Any, str], EventResult] = field(
         default=_element_default_update, kw_only=True
     )
@@ -84,24 +92,28 @@ class Element:
 
 @dataclass
 class Text(Element):
-    content: str = ""
+    content: str = field(default="", metadata={"attribute": False})
 
 
 @dataclass
 class Image(Element):
-    style: str = field(default="h-full object-contain", kw_only=True)
-    src: str = ""
+    style: str = field(
+        default="h-full object-contain",
+        metadata={"attribute": True, "actual": "class"},
+        kw_only=True,
+    )
+    src: str = field(default="", metadata={"attribute": True})
 
 
 @dataclass
 class Input(Element):
-    name: str = field()
+    name: str = field(metadata={"attribute": True})
 
     def setup(self):
         top = self.parent
         while top is not None:
             if isinstance(top, Form):
-                top.fields[self.name] = self
+                top.input_fields[self.name] = self
                 break
             else:
                 top = top.parent
@@ -120,13 +132,21 @@ class TextInputType(Enum):
 
 @dataclass
 class TextInput(Input):
-    required: bool = field(default=False, kw_only=True)
-    type: TextInputType = field(default=TextInputType.TEXT, kw_only=True)
-    value: str = field(default="", kw_only=True)
-    placeholder: str = field(default="", kw_only=True)
-    min_length: int = field(default=0, kw_only=True)
-    max_length: Optional[int] = field(default=None, kw_only=True)
-    size: Optional[int] = field(default=None, kw_only=True)
+    required: bool = field(default=False, metadata={"attribute": True}, kw_only=True)
+    type: TextInputType = field(
+        default=TextInputType.TEXT, metadata={"attribute": True}, kw_only=True
+    )
+    value: str = field(default="", metadata={"attribute": True}, kw_only=True)
+    placeholder: str = field(default="", metadata={"attribute": True}, kw_only=True)
+    min_length: int = field(
+        default=0, metadata={"attribute": True, "actual": "minlength"}, kw_only=True
+    )
+    max_length: Optional[int] = field(
+        default=None, metadata={"attribute": True, "actual": "maxlength"}, kw_only=True
+    )
+    size: Optional[int] = field(
+        default=None, metadata={"attribute": True}, kw_only=True
+    )
 
     def _event_preupdate(self, data: dict):
         if self.name in data:
@@ -141,8 +161,8 @@ class ButtonType(Enum):
 
 @dataclass
 class Button(Input):
-    type: ButtonType = field(default=ButtonType.BUTTON)
-    content: str = field(default="")
+    type: ButtonType = field(default=ButtonType.BUTTON, metadata={"attribute": True})
+    content: str = field(default="", metadata={"attribute": False})
 
 
 @dataclass
@@ -199,12 +219,18 @@ class Root(Container):
 
 @dataclass
 class Form(Container):
-    trigger: str = field(default="submit", kw_only=True)
-    fields: dict[str, Input] = field(default_factory=dict[str, Input], kw_only=True)
+    trigger: str = field(
+        default="submit",
+        metadata={"attribute": True, "actual": "hx-trigger"},
+        kw_only=True,
+    )
+    input_fields: dict[str, Input] = field(
+        default_factory=dict[str, Input], kw_only=True
+    )
 
     def _event_preupdate(self, data: dict):
         for key, value in data.items():
-            if key in self.fields:
-                field = self.fields[key]
+            if key in self.input_fields:
+                field = self.input_fields[key]
                 if isinstance(field, TextInput):
                     field.value = value
