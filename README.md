@@ -48,15 +48,13 @@ After installation, you can build an app using the `provecta` package:
 from provecta import App, Root, Container, Button, ButtonType, Text, EventResult
 
 
-def button_click(this: Button, source: Button, root: Root, trigger: str) -> EventResult:
+def button_click(this: Button, source: Button, root: Root, trigger: str):
     click_count, set_click_count = this.use_state("click_count", 0)
     set_click_count(click_count + 1)
     if click_count + 1 < 10:
         this.parent.add(Text(f"this was added on click number {click_count + 1}"))
-        return EventResult.MUTATE_PARENT
     else:
         root.load_into(Root([Text("you clicked the button too many times blud")]))
-        return EventResult.MUTATE_ALL
 
 
 def page() -> Root:

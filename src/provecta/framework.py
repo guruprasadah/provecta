@@ -53,8 +53,10 @@ class App(Starlette):
         kept for backwards compatibility.
     """
 
-    def __init__(self, app_dir: str = "app", hot_reload: bool = False, **kwargs):
-        self.app_dir = app_dir
+    def __init__(
+        self, app_entry: Callable[[], Root], hot_reload: bool = False, **kwargs
+    ):
+        self.app_entry = app_entry
         self.hot_reload = hot_reload
 
         routes = [
@@ -71,8 +73,7 @@ class App(Starlette):
         await websocket.accept()
 
         renderer = HTMLRenderer()
-        homepage: Page = importlib.import_module(f"{self.app_dir}.home").page
-        root = homepage()
+        root = self.app_entry()
         rendered = renderer.render(root)
         logger.debug(f"rendered: {rendered}")
         await websocket.send_text(rendered)
